@@ -16,34 +16,36 @@
 
 #![allow(non_snake_case, clippy::cast_lossless)]
 
-use std::cell::{Cell, RefCell};
-use std::mem;
-use std::panic::Location;
-use std::ptr::{null, null_mut};
-use std::rc::{Rc, Weak};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::{
+    cell::{Cell, RefCell},
+    mem,
+    panic::Location,
+    ptr::{null, null_mut},
+    rc::{Rc, Weak},
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 
 use scopeguard::defer;
 use tracing::{debug, error, warn};
-use winapi::ctypes::{c_int, c_void};
-use winapi::shared::dxgi::*;
-use winapi::shared::dxgi1_2::*;
-use winapi::shared::dxgiformat::*;
-use winapi::shared::dxgitype::*;
-use winapi::shared::minwindef::*;
-use winapi::shared::windef::*;
-use winapi::shared::winerror::*;
-use winapi::um::dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual};
-use winapi::um::dwmapi::DwmExtendFrameIntoClientArea;
-use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::shellscalingapi::MDT_EFFECTIVE_DPI;
-use winapi::um::unknwnbase::*;
-use winapi::um::uxtheme::*;
-use winapi::um::wingdi::*;
-use winapi::um::winnt::*;
-use winapi::um::winuser::*;
-use winapi::Interface;
+use winapi::{
+    ctypes::{c_int, c_void},
+    shared::{
+        dxgi::*, dxgi1_2::*, dxgiformat::*, dxgitype::*, minwindef::*, windef::*, winerror::*,
+    },
+    um::{
+        dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual},
+        dwmapi::DwmExtendFrameIntoClientArea,
+        errhandlingapi::GetLastError,
+        shellscalingapi::MDT_EFFECTIVE_DPI,
+        unknwnbase::*,
+        uxtheme::*,
+        wingdi::*,
+        winnt::*,
+        winuser::*,
+    },
+    Interface,
+};
 use wio::com::ComPtr;
 
 #[cfg(feature = "raw-win-handle")]
@@ -1342,7 +1344,9 @@ impl WindowBuilder {
 
     pub fn set_level(&mut self, level: WindowLevel) {
         match level {
-            WindowLevel::AppWindow | WindowLevel::Tooltip(_) => self.level = Some(level),
+            WindowLevel::AppWindow | WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) => {
+                self.level = Some(level)
+            }
             _ => {
                 warn!("WindowLevel::Modal and WindowLevel::DropDown is currently unimplemented for Windows backend.");
             }
@@ -1414,8 +1418,8 @@ impl WindowBuilder {
                         }
                     }
                     WindowLevel::DropDown(_) => {
-                        dwStyle = WS_CHILD;
-                        dwExStyle = 0;
+                        dwStyle = WS_POPUP;
+                        dwExStyle = WS_EX_TOOLWINDOW;
                     }
                     WindowLevel::Modal(_) => {
                         dwStyle = WS_OVERLAPPED;
@@ -1495,6 +1499,54 @@ impl WindowBuilder {
             );
             if hwnd.is_null() {
                 return Err(Error::NullHwnd);
+            }
+
+            if self.transparent {
+                dbg!(winapi::um::dwmapi::DwmEnableBlurBehindWindow(
+                    hwnd,
+                    &winapi::um::dwmapi::DWM_BLURBEHIND {
+                        dwFlags: winapi::um::dwmapi::DWM_BB_ENABLE
+                            | winapi::um::dwmapi::DWM_BB_BLURREGION,
+                        fEnable: TRUE,
+                        hRgnBlur: std::ptr::null_mut(),
+                        fTransitionOnMaximized: FALSE,
+                    },
+                ));
+                #[repr(C)]
+                struct AccentPolicy {
+                    n_accent_state: c_int,
+                    n_flags: c_int,
+                    n_color: c_int,
+                    n_animation_id: c_int,
+                }
+                #[repr(C)]
+                struct WINCOMPATTRDATA {
+                    nAttribute: c_int,
+                    pData: PVOID,
+                    ulDataSize: ULONG,
+                }
+
+                let policy = &AccentPolicy {
+                    n_accent_state: 3,
+                    n_flags: 0,
+                    n_color: 0,
+                    n_animation_id: 0,
+                };
+                let user32 = winapi::um::libloaderapi::LoadLibraryA("user32.dll\0".as_ptr() as _);
+                let addr = winapi::um::libloaderapi::GetProcAddress(
+                    user32,
+                    "SetWindowCompositionAttribute\0".as_ptr() as _,
+                );
+                let SetWindowCompositionAttribute: unsafe extern "system" fn(hwnd: HWND, data: *const WINCOMPATTRDATA) -> BOOL =
+                    std::mem::transmute(addr);
+                dbg!(SetWindowCompositionAttribute(
+                    hwnd,
+                    &WINCOMPATTRDATA {
+                        nAttribute: 19,
+                        pData: policy as *const _ as *mut _,
+                        ulDataSize: std::mem::size_of::<AccentPolicy>() as _,
+                    }
+                ));
             }
 
             if let Some(size_dp) = self.size {
