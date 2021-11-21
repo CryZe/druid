@@ -14,54 +14,59 @@
 
 //! X11 window creation and window management.
 
-use std::cell::{Cell, RefCell};
-use std::collections::BinaryHeap;
-use std::convert::{TryFrom, TryInto};
-use std::os::unix::io::RawFd;
-use std::panic::Location;
-use std::rc::{Rc, Weak};
-use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::{
+    cell::{Cell, RefCell},
+    collections::BinaryHeap,
+    convert::{TryFrom, TryInto},
+    os::unix::io::RawFd,
+    panic::Location,
+    rc::{Rc, Weak},
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use crate::scale::Scalable;
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
 use tracing::{error, info, warn};
-use x11rb::connection::Connection;
-use x11rb::errors::ReplyOrIdError;
-use x11rb::properties::{WmHints, WmHintsState, WmSizeHints};
-use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
-use x11rb::protocol::render::{ConnectionExt as _, Pictformat};
-use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
-use x11rb::protocol::xproto::{
-    self, AtomEnum, ChangeWindowAttributesAux, ColormapAlloc, ConfigureNotifyEvent,
-    ConfigureWindowAux, ConnectionExt, CreateGCAux, EventMask, Gcontext, ImageFormat,
-    ImageOrder as X11ImageOrder, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
+use x11rb::{
+    connection::Connection,
+    errors::ReplyOrIdError,
+    properties::{WmHints, WmHintsState, WmSizeHints},
+    protocol::{
+        present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent},
+        render::{ConnectionExt as _, Pictformat},
+        xfixes::{ConnectionExt as _, Region as XRegion},
+        xproto::{
+            self, AtomEnum, ChangeWindowAttributesAux, ColormapAlloc, ConfigureNotifyEvent,
+            ConfigureWindowAux, ConnectionExt, CreateGCAux, EventMask, Gcontext, ImageFormat,
+            ImageOrder as X11ImageOrder, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
+        },
+    },
+    wrapper::ConnectionExt as _,
+    xcb_ffi::XCBConnection,
 };
-use x11rb::wrapper::ConnectionExt as _;
-use x11rb::xcb_ffi::XCBConnection;
 
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
-use crate::common_util::IdleCallback;
-use crate::dialog::FileDialogOptions;
-use crate::error::Error as ShellError;
-use crate::keyboard::{KeyState, Modifiers};
-use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
-use crate::piet::{Piet, PietText, RenderContext};
-use crate::region::Region;
-use crate::scale::Scale;
-use crate::text::{simulate_input, Event};
-use crate::window::{
-    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+use crate::{
+    common_util::IdleCallback,
+    dialog::FileDialogOptions,
+    error::Error as ShellError,
+    keyboard::{KeyState, Modifiers},
+    kurbo::{Insets, Point, Rect, Size, Vec2},
+    mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent},
+    piet::{Piet, PietText, RenderContext},
+    region::Region,
+    scale::Scale,
+    text::{simulate_input, Event},
+    window,
+    window::{FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel},
+    KeyEvent, ScaledArea,
 };
-use crate::{window, KeyEvent, ScaledArea};
 
-use super::application::Application;
-use super::menu::Menu;
-use super::util::Timer;
+use super::{application::Application, menu::Menu, util::Timer};
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
@@ -166,6 +171,10 @@ impl WindowBuilder {
 
     pub fn set_transparent(&mut self, transparent: bool) {
         self.transparent = transparent;
+    }
+
+    pub fn set_topmost(&mut self, topmost: bool) {
+        println!("topmost unimplemented");
     }
 
     pub fn set_position(&mut self, position: Point) {
@@ -1817,6 +1826,10 @@ impl WindowHandle {
             error!("Window {} has already been dropped", self.id);
             Ok(Scale::new(1.0, 1.0))
         }
+    }
+
+    pub fn topmost(&self, topmost: bool) {
+        println!("topmost unimplemented")
     }
 }
 
