@@ -14,15 +14,19 @@
 
 //! macOS implementation of menus.
 
-use cocoa::appkit::{NSEventModifierFlags, NSMenu, NSMenuItem};
-use cocoa::base::{id, nil, NO};
-use cocoa::foundation::{NSAutoreleasePool, NSString};
+use cocoa::{
+    appkit::{NSEventModifierFlags, NSMenu, NSMenuItem},
+    base::{id, nil, NO},
+    foundation::{NSAutoreleasePool, NSString},
+};
 use objc::{msg_send, sel, sel_impl};
 
 use super::util::make_nsstring;
-use crate::common_util::strip_access_key;
-use crate::hotkey::HotKey;
-use crate::keyboard::{KbKey, Modifiers};
+use crate::{
+    common_util::strip_access_key,
+    hotkey::HotKey,
+    keyboard::{KbKey, Modifiers},
+};
 
 pub struct Menu {
     pub menu: id,
@@ -75,7 +79,7 @@ impl Menu {
         unsafe {
             let menu_item = NSMenuItem::alloc(nil).autorelease();
             let title = make_nsstring(&strip_access_key(text));
-            let () = msg_send![menu.menu, setTitle: title];
+            let () = msg_send![menu_item, setTitle: title];
             if !enabled {
                 let () = msg_send![menu_item, setEnabled: NO];
             }
