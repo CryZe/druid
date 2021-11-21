@@ -14,23 +14,24 @@
 
 //! GTK window creation and management.
 
-use std::cell::{Cell, RefCell};
-use std::convert::TryInto;
-use std::ffi::c_void;
-use std::os::raw::{c_int, c_uint};
-use std::panic::Location;
-use std::ptr;
-use std::slice;
-use std::sync::{Arc, Mutex, Weak};
-use std::time::Instant;
+use std::{
+    cell::{Cell, RefCell},
+    convert::TryInto,
+    ffi::c_void,
+    os::raw::{c_int, c_uint},
+    panic::Location,
+    ptr, slice,
+    sync::{Arc, Mutex, Weak},
+    time::Instant,
+};
 
-use gtk::gdk_pixbuf::Colorspace::Rgb;
-use gtk::gdk_pixbuf::Pixbuf;
-use gtk::glib::source::Continue;
-use gtk::glib::translate::FromGlib;
-use gtk::prelude::*;
-use gtk::traits::SettingsExt;
-use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
+use gtk::{
+    gdk_pixbuf::{Colorspace::Rgb, Pixbuf},
+    glib::{source::Continue, translate::FromGlib},
+    prelude::*,
+    traits::SettingsExt,
+    AccelGroup, ApplicationWindow, DrawingArea,
+};
 
 use gdk_sys::GdkKeymapKey;
 
@@ -46,27 +47,27 @@ use tracing::{error, warn};
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
-use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Piet, PietText, RenderContext};
-
-use crate::common_util::{ClickCounter, IdleCallback};
-use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
-use crate::error::Error as ShellError;
-use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
-use crate::piet::ImageFormat;
-use crate::region::Region;
-use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::text::{simulate_input, Event};
-use crate::window::{
-    self, FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+use crate::{
+    kurbo::{Insets, Point, Rect, Size, Vec2},
+    piet::{Piet, PietText, RenderContext},
 };
 
-use super::application::Application;
-use super::dialog;
-use super::keycodes;
-use super::menu::Menu;
-use super::util;
+use crate::{
+    common_util::{ClickCounter, IdleCallback},
+    dialog::{FileDialogOptions, FileDialogType, FileInfo},
+    error::Error as ShellError,
+    keyboard::{KbKey, KeyEvent, KeyState, Modifiers},
+    mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent},
+    piet::ImageFormat,
+    region::Region,
+    scale::{Scalable, Scale, ScaledArea},
+    text::{simulate_input, Event},
+    window::{
+        self, FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+    },
+};
+
+use super::{application::Application, dialog, keycodes, menu::Menu, util};
 
 /// The backend target DPI.
 ///
@@ -258,6 +259,10 @@ impl WindowBuilder {
 
     pub fn set_transparent(&mut self, transparent: bool) {
         self.transparent = transparent;
+    }
+
+    pub fn set_topmost(&mut self, topmost: bool) {
+        println!("topmost unimplemented");
     }
 
     pub fn set_position(&mut self, position: Point) {
@@ -963,6 +968,10 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             state.window.set_decorated(show_titlebar)
         }
+    }
+
+    pub fn topmost(&self, topmost: bool) {
+        println!("topmost unimplemented")
     }
 
     pub fn set_position(&self, mut position: Point) {
