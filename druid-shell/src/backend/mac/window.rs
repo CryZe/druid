@@ -16,55 +16,68 @@
 
 #![allow(non_snake_case)]
 
-use std::ffi::c_void;
-use std::mem;
-use std::sync::{Arc, Mutex, Weak};
-use std::time::Instant;
+use std::{
+    ffi::c_void,
+    mem,
+    sync::{Arc, Mutex, Weak},
+    time::Instant,
+};
 
 use block::ConcreteBlock;
-use cocoa::appkit::{
-    CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSColor,
-    NSEvent, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
-};
-use cocoa::base::{id, nil, BOOL, NO, YES};
-use cocoa::foundation::{
-    NSArray, NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSUInteger,
+use cocoa::{
+    appkit::{
+        CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSColor,
+        NSEvent, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
+    },
+    base::{id, nil, BOOL, NO, YES},
+    foundation::{
+        NSArray, NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSUInteger,
+    },
 };
 use core_graphics::context::CGContextRef;
 use foreign_types::ForeignTypeRef;
 use lazy_static::lazy_static;
-use objc::declare::ClassDecl;
-use objc::rc::WeakPtr;
-use objc::runtime::{Class, Object, Protocol, Sel};
-use objc::{class, msg_send, sel, sel_impl};
+use objc::{
+    class,
+    declare::ClassDecl,
+    msg_send,
+    rc::WeakPtr,
+    runtime::{Class, Object, Protocol, Sel},
+    sel, sel_impl,
+};
 use tracing::{debug, error, info};
 
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
 
-use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Piet, PietText, RenderContext};
+use crate::{
+    kurbo::{Insets, Point, Rect, Size, Vec2},
+    piet::{Piet, PietText, RenderContext},
+};
 
-use super::appkit::{
-    NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
+use super::{
+    appkit::{NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt},
+    application::Application,
+    dialog,
+    keyboard::{make_modifiers, KeyboardState},
+    menu::Menu,
+    text_input::NSRange,
+    util::{assert_main_thread, make_nsstring},
 };
-use super::application::Application;
-use super::dialog;
-use super::keyboard::{make_modifiers, KeyboardState};
-use super::menu::Menu;
-use super::text_input::NSRange;
-use super::util::{assert_main_thread, make_nsstring};
-use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileDialogType};
-use crate::keyboard_types::KeyState;
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
-use crate::region::Region;
-use crate::scale::Scale;
-use crate::text::{Event, InputHandler};
-use crate::window::{
-    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel, WindowState,
+use crate::{
+    common_util::IdleCallback,
+    dialog::{FileDialogOptions, FileDialogType},
+    keyboard_types::KeyState,
+    mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent},
+    region::Region,
+    scale::Scale,
+    text::{Event, InputHandler},
+    window::{
+        FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+        WindowState,
+    },
+    Error,
 };
-use crate::Error;
 
 #[allow(non_upper_case_globals)]
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
@@ -329,6 +342,10 @@ impl WindowBuilder {
 
             Ok(handle)
         }
+    }
+
+    pub(crate) fn set_topmost(&self, topmost: bool) {
+        println!("set_topmost unimplemented");
     }
 }
 
@@ -1408,6 +1425,10 @@ impl WindowHandle {
     pub fn get_scale(&self) -> Result<Scale, Error> {
         // TODO: Get actual Scale
         Ok(Scale::new(1.0, 1.0))
+    }
+
+    pub(crate) fn topmost(&self, topmost: bool) {
+        println!("topmost unimplemented");
     }
 }
 
