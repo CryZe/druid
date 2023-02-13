@@ -14,30 +14,36 @@
 
 //! The implementation of the WinHandler trait (druid-shell integration).
 
-use std::any::{Any, TypeId};
-use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
-use std::rc::Rc;
-
-use crate::kurbo::Size;
-use crate::piet::Piet;
-use crate::shell::{
-    text::InputHandler, Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, Region,
-    Scale, TextFieldToken, WinHandler, WindowHandle,
+use std::{
+    any::{Any, TypeId},
+    cell::RefCell,
+    collections::{HashMap, VecDeque},
+    rc::Rc,
 };
 
-use crate::app_delegate::{AppDelegate, DelegateCtx};
-use crate::core::CommandQueue;
-use crate::ext_event::{ExtEventHost, ExtEventSink};
-use crate::menu::{ContextMenu, MenuItemId, MenuManager};
-use crate::window::{ImeUpdateFn, Window};
 use crate::{
+    kurbo::Size,
+    piet::Piet,
+    shell::{
+        text::InputHandler, Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, Region,
+        Scale, TextFieldToken, WinHandler, WindowHandle,
+    },
+};
+
+use crate::{
+    app_delegate::{AppDelegate, DelegateCtx},
+    core::CommandQueue,
+    ext_event::{ExtEventHost, ExtEventSink},
+    menu::{ContextMenu, MenuItemId, MenuManager},
+    window::{ImeUpdateFn, Window},
     Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, PlatformError, Selector, Target,
     TimerToken, WidgetId, WindowDesc, WindowId,
 };
 
-use crate::app::{PendingWindow, WindowConfig};
-use crate::command::sys as sys_cmd;
+use crate::{
+    app::{PendingWindow, WindowConfig},
+    command::sys as sys_cmd,
+};
 use druid_shell::WindowBuilder;
 
 pub(crate) const RUN_COMMANDS_TOKEN: IdleToken = IdleToken::new(1);
@@ -1016,6 +1022,11 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn got_focus(&mut self) {
         self.app_state.window_got_focus(self.window_id);
+    }
+
+    fn lost_focus(&mut self) {
+        self.app_state
+            .do_window_event(Event::WindowLostFocus, self.window_id);
     }
 
     fn timer(&mut self, token: TimerToken) {

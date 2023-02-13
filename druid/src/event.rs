@@ -18,9 +18,11 @@ use std::ops::{Add, Sub};
 
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
-use crate::kurbo::{Rect, Size};
-use crate::mouse::MouseEvent;
-use crate::{Command, Notification, Point, WidgetId};
+use crate::{
+    kurbo::{Rect, Size},
+    mouse::MouseEvent,
+    Command, Notification, Point, WidgetId,
+};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -51,6 +53,7 @@ use crate::{Command, Notification, Point, WidgetId};
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Debug, Clone)]
 pub enum Event {
+    WindowLostFocus,
     /// Sent to all widgets in a given window when that window is first instantiated.
     ///
     /// This should always be the first `Event` received, although widgets will
@@ -412,7 +415,8 @@ impl Event {
     /// [`LifeCycle::should_propagate_to_hidden`]: LifeCycle::should_propagate_to_hidden
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
-            Event::WindowConnected
+            Event::WindowLostFocus
+            | Event::WindowConnected
             | Event::WindowCloseRequested
             | Event::WindowDisconnected
             | Event::WindowSize(_)
@@ -527,9 +531,7 @@ impl ViewContext {
 pub(crate) use state_cell::{DebugStateCell, StateCell, StateCheckFn};
 
 mod state_cell {
-    use crate::core::WidgetState;
-    use crate::debug_state::DebugState;
-    use crate::WidgetId;
+    use crate::{core::WidgetState, debug_state::DebugState, WidgetId};
     use std::{cell::RefCell, rc::Rc};
 
     /// An interior-mutable struct for fetching WidgetState.
