@@ -23,18 +23,20 @@ use std::{
 };
 use tracing::{error, trace, warn};
 
-use crate::commands::SCROLL_TO_VIEW;
-use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
-use crate::env::KeyLike;
-use crate::menu::ContextMenu;
-use crate::piet::{Piet, PietText, RenderContext};
-use crate::shell::text::Event as ImeInvalidation;
-use crate::shell::Region;
-use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
-    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, Cursor, Data, Env,
-    ExtEventSink, Insets, Menu, Notification, Point, Rect, Scale, SingleUse, Size, Target,
-    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    commands,
+    commands::SCROLL_TO_VIEW,
+    core::{CommandQueue, CursorChange, FocusChange, WidgetState},
+    env::KeyLike,
+    menu::ContextMenu,
+    piet::{Piet, PietText, RenderContext},
+    shell::{text::Event as ImeInvalidation, Region},
+    sub_window::SubWindowDesc,
+    text::{ImeHandlerRef, TextFieldRegistration},
+    widget::Widget,
+    Affine, Command, Cursor, Data, Env, ExtEventSink, Insets, Menu, Notification, Point, Rect,
+    Scale, SingleUse, Size, Target, TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc,
+    WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.

@@ -16,68 +16,76 @@
 
 #![allow(non_snake_case, clippy::cast_lossless)]
 
-use std::cell::{Cell, RefCell};
-use std::mem;
-use std::panic::Location;
-use std::ptr::{null, null_mut};
-use std::rc::{Rc, Weak};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::{
+    cell::{Cell, RefCell},
+    mem,
+    panic::Location,
+    ptr::{null, null_mut},
+    rc::{Rc, Weak},
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 
 use scopeguard::defer;
 use tracing::{debug, error, warn};
-use winapi::ctypes::{c_int, c_void};
-use winapi::shared::dxgi::*;
-use winapi::shared::dxgi1_2::*;
-use winapi::shared::dxgiformat::*;
-use winapi::shared::dxgitype::*;
-use winapi::shared::minwindef::*;
-use winapi::shared::windef::*;
-use winapi::shared::winerror::*;
-use winapi::um::dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual};
-use winapi::um::dwmapi::{DwmExtendFrameIntoClientArea, DwmSetWindowAttribute};
-use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::shellscalingapi::MDT_EFFECTIVE_DPI;
-use winapi::um::unknwnbase::*;
-use winapi::um::uxtheme::*;
-use winapi::um::wingdi::*;
-use winapi::um::winnt::*;
-use winapi::um::winreg::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
-use winapi::um::winuser::*;
-use winapi::Interface;
+use winapi::{
+    ctypes::{c_int, c_void},
+    shared::{
+        dxgi::*, dxgi1_2::*, dxgiformat::*, dxgitype::*, minwindef::*, windef::*, winerror::*,
+    },
+    um::{
+        dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual},
+        dwmapi::{DwmExtendFrameIntoClientArea, DwmSetWindowAttribute},
+        errhandlingapi::GetLastError,
+        shellscalingapi::MDT_EFFECTIVE_DPI,
+        unknwnbase::*,
+        uxtheme::*,
+        wingdi::*,
+        winnt::*,
+        winreg::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD},
+        winuser::*,
+    },
+    Interface,
+};
 use wio::com::ComPtr;
 
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, Win32WindowHandle};
 
-use piet_common::d2d::{D2DFactory, DeviceContext};
-use piet_common::dwrite::DwriteFactory;
+use piet_common::{
+    d2d::{D2DFactory, DeviceContext},
+    dwrite::DwriteFactory,
+};
 
-use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Piet, PietText, RenderContext};
+use crate::{
+    kurbo::{Insets, Point, Rect, Size, Vec2},
+    piet::{Piet, PietText, RenderContext},
+};
 
-use super::accels::register_accel;
-use super::application::Application;
-use super::dcomp::D3D11Device;
-use super::dialog::get_file_dialog_path;
-use super::error::Error;
-use super::keyboard::{self, KeyboardState};
-use super::menu::Menu;
-use super::paint;
-use super::timers::TimerSlots;
-use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
+use super::{
+    accels::register_accel,
+    application::Application,
+    dcomp::D3D11Device,
+    dialog::get_file_dialog_path,
+    error::Error,
+    keyboard::{self, KeyboardState},
+    menu::Menu,
+    paint,
+    timers::TimerSlots,
+    util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS},
+};
 
-use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
-use crate::error::Error as ShellError;
-use crate::keyboard::{KbKey, KeyState};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
-use crate::region::Region;
-use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::text::{simulate_input, Event};
-use crate::window;
-use crate::window::{
-    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+use crate::{
+    common_util::IdleCallback,
+    dialog::{FileDialogOptions, FileDialogType, FileInfo},
+    error::Error as ShellError,
+    keyboard::{KbKey, KeyState},
+    mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent},
+    region::Region,
+    scale::{Scalable, Scale, ScaledArea},
+    text::{simulate_input, Event},
+    window,
+    window::{FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel},
 };
 
 /// The backend target DPI.
@@ -1377,17 +1385,29 @@ impl WindowBuilder {
             if let Some(level) = self.level {
                 window_level = level.clone();
                 match level {
+                    WindowLevel::Tooltip(_) => {
+                        dwStyle = WS_POPUP;
+                        dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
+                        focusable = false;
+                    }
+                    WindowLevel::DropDown(_) => {
+                        dwStyle = WS_POPUP;
+                        dwExStyle = WS_EX_TOOLWINDOW;
+                    }
+                    _ => {}
+                }
+                match level {
                     WindowLevel::AppWindow => (),
                     WindowLevel::Tooltip(parent_window_handle)
                     | WindowLevel::DropDown(parent_window_handle)
                     | WindowLevel::Modal(parent_window_handle) => {
                         // Guess the scale will be the same as the parent's
                         scale = parent_window_handle.get_scale().unwrap_or_default();
-                        parent_pos_dp = Some(parent_window_handle.get_position());
+                        let insets = parent_window_handle.content_insets();
+                        parent_pos_dp = Some(
+                            parent_window_handle.get_position() + Vec2::new(insets.x0, insets.y0),
+                        );
                         parent_hwnd = parent_window_handle.0.get_hwnd();
-                        dwStyle = WS_POPUP;
-                        dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
-                        focusable = false;
                     }
                 }
             } else {

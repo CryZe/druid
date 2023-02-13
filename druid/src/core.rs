@@ -17,13 +17,13 @@
 use std::collections::VecDeque;
 use tracing::{trace, trace_span, warn};
 
-use crate::bloom::Bloom;
-use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
-use crate::commands::SCROLL_TO_VIEW;
-use crate::contexts::{ChangeCtx, ContextState};
-use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
-use crate::sub_window::SubWindowUpdate;
 use crate::{
+    bloom::Bloom,
+    command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST},
+    commands::SCROLL_TO_VIEW,
+    contexts::{ChangeCtx, ContextState},
+    kurbo::{Affine, Insets, Point, Rect, Shape, Size},
+    sub_window::SubWindowUpdate,
     ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Notification, PaintCtx, Region,
     RenderContext, Target, TextLayout, UpdateCtx, Widget, WidgetId, WindowId,
@@ -682,7 +682,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     }
                 }
             },
-            Event::WindowConnected | Event::WindowCloseRequested => true,
+            Event::WindowConnected | Event::WindowCloseRequested | Event::WindowLostFocus => true,
             Event::WindowDisconnected => {
                 for (window_id, _) in &self.state.sub_window_hosts {
                     ctx.submit_command(CLOSE_WINDOW.to(*window_id))
@@ -1364,10 +1364,12 @@ impl CursorChange {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ext_event::ExtEventHost;
-    use crate::text::ParseFormatter;
-    use crate::widget::{Button, Flex, Scroll, Split, TextBox};
-    use crate::{WidgetExt, WindowHandle, WindowId};
+    use crate::{
+        ext_event::ExtEventHost,
+        text::ParseFormatter,
+        widget::{Button, Flex, Scroll, Split, TextBox},
+        WidgetExt, WindowHandle, WindowId,
+    };
     use std::collections::HashMap;
     use test_log::test;
 
